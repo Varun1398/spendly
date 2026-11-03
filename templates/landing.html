@@ -19,7 +19,7 @@
     </p>
     <div class="lp-actions">
         <a href="{{ url_for('register') }}" class="lp-btn">Create free account</a>
-        <a href="#features" class="lp-btn">See how it works</a>
+        <button type="button" class="lp-btn" id="video-open">See how it works</button>
     </div>
 
     <div class="lp-window">
@@ -86,4 +86,45 @@
     </div>
 </section>
 
+<div class="lp-modal" id="video-modal" hidden>
+    <div class="lp-modal-box" role="dialog" aria-modal="true" aria-label="How Spendly works">
+        <button type="button" class="lp-modal-close" id="video-close" aria-label="Close">&times;</button>
+        <div class="lp-modal-video">
+            <iframe id="video-frame" title="How Spendly works"
+                    allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // Placeholder video — replace with your own YouTube embed URL.
+    var VIDEO_URL = "https://www.youtube.com/embed/M7lc1UVf-VE";
+
+    var modal = document.getElementById("video-modal");
+    var frame = document.getElementById("video-frame");
+
+    function openModal() {
+        frame.src = VIDEO_URL + "?autoplay=1";
+        modal.hidden = false;
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        frame.src = ""; // unloading the iframe stops playback
+    }
+
+    document.getElementById("video-open").addEventListener("click", openModal);
+    document.getElementById("video-close").addEventListener("click", closeModal);
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !modal.hidden) closeModal();
+    });
+})();
+</script>
 {% endblock %}
