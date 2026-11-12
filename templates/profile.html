@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Your Profile — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="prof-page">
+
+    <header class="prof-header">
+        <div class="prof-avatar" aria-hidden="true">{{ user['name'][:1]|upper }}</div>
+        <div class="prof-identity">
+            <h1 class="prof-name">{{ user['name'] }}</h1>
+            <p class="prof-email">{{ user['email'] }}</p>
+            <p class="prof-since">Member since {{ member_since }}</p>
+        </div>
+    </header>
+
+    <section class="prof-stats" aria-label="Spending summary">
+        <div class="prof-stat">
+            <span class="prof-label">Total spent</span>
+            <span class="prof-figure">{{ summary['total']|inr }}</span>
+        </div>
+        <div class="prof-stat">
+            <span class="prof-label">Expenses</span>
+            <span class="prof-figure">{{ summary['count'] }}</span>
+        </div>
+        <div class="prof-stat">
+            <span class="prof-label">Top category</span>
+            <span class="prof-figure">{{ top_category or '—' }}</span>
+        </div>
+    </section>
+
+    <div class="prof-grid">
+
+        <section class="prof-card" aria-labelledby="cat-title">
+            <h2 class="prof-card-title" id="cat-title">Where your money goes</h2>
+            {% if categories %}
+            <ul class="prof-cats">
+                {% for c in categories %}
+                <li class="prof-cat">
+                    <div class="prof-cat-row">
+                        <span class="prof-cat-name">{{ c['category'] }}</span>
+                        <span class="prof-cat-amount">{{ c['total']|inr }} · {{ c['pct'] }}%</span>
+                    </div>
+                    <progress class="prof-bar" value="{{ c['pct'] }}" max="100"
+                              aria-label="{{ c['category'] }} share of spending">{{ c['pct'] }}%</progress>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="prof-empty">Nothing to break down yet. Add an expense to see where your money goes.</p>
+            {% endif %}
+        </section>
+
+        <section class="prof-card" aria-labelledby="recent-title">
+            <h2 class="prof-card-title" id="recent-title">Recent expenses</h2>
+            {% if expenses %}
+            <table class="prof-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Category</th>
+                        <th scope="col" class="prof-num">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in expenses %}
+                    <tr>
+                        <td data-label="Date">{{ e['date'] }}</td>
+                        <td data-label="Description" class="prof-desc">{{ e['description'] or '—' }}</td>
+                        <td data-label="Category"><span class="prof-chip">{{ e['category'] }}</span></td>
+                        <td data-label="Amount" class="prof-num">{{ e['amount']|inr }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="prof-empty">
+                <p>No expenses yet. Add your first one to see where your money goes.</p>
+                <a href="{{ url_for('add_expense') }}" class="prof-empty-link">Add expense</a>
+            </div>
+            {% endif %}
+        </section>
+
+    </div>
+</div>
+{% endblock %}
