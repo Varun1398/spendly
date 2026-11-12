@@ -1,0 +1,277 @@
+/* ------------------------------------------------------------------ */
+/* Profile page                                                        */
+/* ------------------------------------------------------------------ */
+
+.prof-page {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+}
+
+/* Header ------------------------------------------------------------ */
+
+.prof-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.prof-avatar {
+    flex: none;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prof-name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 2rem;
+    line-height: 1.15;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.prof-email {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+}
+
+.prof-since {
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    margin-top: 0.15rem;
+}
+
+/* Stat tiles -------------------------------------------------------- */
+
+.prof-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.prof-stat {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.prof-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+}
+
+.prof-figure {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1.2;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* Cards ------------------------------------------------------------- */
+
+.prof-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.prof-card {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    min-width: 0;
+}
+
+.prof-card-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.3rem;
+    color: var(--ink);
+    margin-bottom: 1.25rem;
+}
+
+/* Category breakdown ------------------------------------------------ */
+
+.prof-cats {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.prof-cat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.prof-cat-name { color: var(--ink); font-weight: 500; }
+
+.prof-cat-amount {
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.prof-bar {
+    display: block;
+    width: 100%;
+    height: 0.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--paper-warm);
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.prof-bar::-webkit-progress-bar { background: var(--paper-warm); }
+.prof-bar::-webkit-progress-value { background: var(--accent); border-radius: var(--radius-sm); }
+.prof-bar::-moz-progress-bar { background: var(--accent); border-radius: var(--radius-sm); }
+
+/* Recent expenses --------------------------------------------------- */
+
+.prof-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.prof-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding: 0 0.75rem 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.prof-table td {
+    padding: 0.8rem 0.75rem 0.8rem 0;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--ink-soft);
+    vertical-align: middle;
+}
+
+.prof-table tbody tr:last-child td { border-bottom: none; }
+
+.prof-table .prof-num {
+    text-align: right;
+    padding-right: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.prof-table td.prof-num { color: var(--ink); font-weight: 500; }
+
+.prof-desc { overflow-wrap: anywhere; }
+
+.prof-chip {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-lg);
+}
+
+/* Empty state ------------------------------------------------------- */
+
+.prof-empty {
+    color: var(--ink-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.prof-empty-link {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.prof-empty-link:hover { text-decoration: underline; }
+
+.prof-empty-link:focus-visible,
+.prof-page a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Responsive -------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .prof-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .prof-page { padding: 1.5rem 1rem 3rem; }
+    .prof-stats { grid-template-columns: 1fr; }
+    .prof-name { font-size: 1.6rem; }
+
+    .prof-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .prof-table tr {
+        display: block;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .prof-table tbody tr:last-child { border-bottom: none; }
+
+    .prof-table td {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.25rem 0;
+        border-bottom: none;
+        text-align: right;
+    }
+
+    .prof-table td::before {
+        content: attr(data-label);
+        color: var(--ink-muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-align: left;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .prof-page * { transition: none !important; }
+}
