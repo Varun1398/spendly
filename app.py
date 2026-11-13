@@ -2,11 +2,21 @@ import os
 import sqlite3
 from datetime import datetime
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash
 
 from database.db import (
     create_user,
+    get_categories,
     get_category_totals,
     get_db,
     get_expense_summary,
@@ -159,6 +169,96 @@ def _member_since(created_at):
         return created_at or ""
 
 
+def _parse_date(value):
+    """Return value if it is a valid YYYY-MM-DD date string, else None."""
+    try:
+        datetime.strptime(value or "", "%Y-%m-%d")
+        return value
+    except ValueError:
+        return None
+
+
+def _parse_filters(args, user_id):
+    """Validate ?from=&to=&category= and return (filters, error).
+
+    `filters` keys match the db helper kwargs (date_from, date_to, category) so
+    it can be passed as **filters. Invalid values are ignored. If from > to the
+    filters are dropped entirely and an error message is returned.
+    """
+    filters = {
+        "date_from": _parse_date(args.get("from", "").strip()),
+        "date_to": _parse_date(args.get("to", "").strip()),
+        "category": None,
+    }
+    category = args.get("category", "").strip()
+    if category and category in get_categories(user_id):
+        filters["category"] = category
+
+    if filters["date_from"] and filters["date_to"] and filters["date_from"] > filters["date_to"]:
+        empty = {"date_from": None, "date_to": None, "category": None}
+        return empty, "'From' date must not be after 'To' date. Showing all expenses."
+    return filters, None
+
+
+# === SECTION 1: TRANSACTION HISTORY (Subagent 1) ===========================
+# Owns: _transaction_history
+
+def _transaction_history(user_id, filters):
+    """Return the user's (filtered) expenses, newest first, as db rows."""
+    return get_recent_expenses(
+        user_id,
+        limit=10,
+        date_from=filters.get("date_from"),
+        date_to=filters.get("date_to"),
+        category=filters.get("category"),
+    )
+
+# === END SECTION 1 =========================================================
+
+
+# === SECTION 2: SUMMARY STATS (Subagent 2) =================================
+# Owns: _summary_stats and the GET /profile/summary JSON route
+
+def _summary_stats(user_id, filters):
+    """Return {'total': float, 'count': int, 'top_category': str | None}."""
+    summary = get_expense_summary(user_id, **filters)
+    categories = get_category_totals(user_id, **filters)
+    return {
+        "total": float(summary["total"]),
+        "count": int(summary["count"]),
+        "top_category": categories[0]["category"] if categories else None,
+    }
+
+
+@app.route("/profile/summary")
+def profile_summary():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Authentication required"}), 401
+    filters, _error = _parse_filters(request.args, user_id)
+    stats = _summary_stats(user_id, filters)
+    return jsonify({
+        "total": stats["total"],
+        "count": stats["count"],
+        "top_category": stats["top_category"],
+        "categories": _category_breakdown(user_id, filters),
+    })
+
+# === END SECTION 2 =========================================================
+
+
+# === SECTION 3: CATEGORY BREAKDOWN (Subagent 3) ============================
+# Owns: _category_breakdown
+
+def _category_breakdown(user_id, filters):
+    """Return [{'category', 'total', 'pct'}, ...] highest first; pct sums to 100."""
+    categories = get_category_totals(user_id, **filters)
+    grand_total = sum(c["total"] for c in categories)
+    return _with_percentages(categories, grand_total)
+
+# === END SECTION 3 =========================================================
+
+
 @app.route("/profile")
 def profile():
     user_id = session.get("user_id")
@@ -171,16 +271,22 @@ def profile():
         session.clear()
         return redirect(url_for("login"))
 
-    summary = get_expense_summary(user_id)
-    totals = get_category_totals(user_id)
+    filters, error = _parse_filters(request.args, user_id)
+    if error:
+        flash(error, "error")
+
+    stats = _summary_stats(user_id, filters)
     return render_template(
         "profile.html",
         user=user,
-        summary=summary,
-        top_category=totals[0]["category"] if totals else None,
-        categories=_with_percentages(totals, summary["total"]),
-        expenses=get_recent_expenses(user_id),
+        summary={"total": stats["total"], "count": stats["count"]},
+        top_category=stats["top_category"],
+        categories=_category_breakdown(user_id, filters),
+        expenses=_transaction_history(user_id, filters),
         member_since=_member_since(user["created_at"]),
+        filters=filters,
+        filtered=any(filters.values()),
+        all_categories=get_categories(user_id),
     )
 
 
