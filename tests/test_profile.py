@@ -160,3 +160,106 @@ def test_profile_css_has_no_hex_colors():
         encoding="utf-8"
     )
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", css)
+
+
+# ------------------------------------------------------------------ #
+# Step 5 — filters and /profile/summary                               #
+# ------------------------------------------------------------------ #
+
+def _expense_dates(client):
+    """Return {description: iso date} for the demo user's seeded expenses."""
+    conn = db.get_db()
+    try:
+        rows = conn.execute("SELECT description, date FROM expenses").fetchall()
+    finally:
+        conn.close()
+    return {r["description"]: r["date"] for r in rows}
+
+
+def test_no_filters_unchanged(client):
+    login(client)
+    body = client.get("/profile").data.decode()
+    assert "₹400.24" in body
+    assert "Groceries" in body and "Electricity bill" in body
+
+
+def test_category_filter(client):
+    login(client)
+    body = client.get("/profile?category=Food").data.decode()
+    assert "Lunch at cafe" in body and "Groceries" in body
+    assert "Electricity bill" not in body
+    assert "₹45.25" in body  # 12.50 + 32.75
+
+
+def test_date_bounds_are_inclusive_and_independent(client):
+    login(client)
+    d = _expense_dates(client)
+    day = d["Electricity bill"]
+    both = client.get(f"/profile?from={day}&to={day}").data.decode()
+    assert "Electricity bill" in both and "Pharmacy" not in both
+    only_from = client.get(f"/profile?from={day}").data.decode()
+    assert "Electricity bill" in only_from and "Lunch at cafe" not in only_from
+    only_to = client.get(f"/profile?to={day}").data.decode()
+    assert "Electricity bill" in only_to and "Pharmacy" not in only_to
+
+
+def test_no_match_shows_empty_state(client):
+    login(client)
+    resp = client.get("/profile?from=2000-01-01&to=2000-01-31")
+    assert resp.status_code == 200
+    assert "No expenses match these filters" in resp.data.decode()
+
+
+def test_from_after_to_flashes_and_falls_back(client):
+    login(client)
+    resp = client.get("/profile?from=2026-12-01&to=2026-01-01", follow_redirects=True)
+    body = resp.data.decode()
+    assert "must not be after" in body
+    assert "₹400.24" in body
+
+
+def test_garbage_filters_do_not_error(client):
+    login(client)
+    for qs in ("from=abc", "to=99-99-99", "category=Nope", "category=<script>alert(1)</script>"):
+        resp = client.get("/profile?" + qs)
+        assert resp.status_code == 200
+        assert "<script>alert(1)</script>" not in resp.data.decode()
+
+
+def test_filter_bar_prefilled(client):
+    login(client)
+    body = client.get("/profile?category=Bills&from=2020-01-01").data.decode()
+    assert 'value="2020-01-01"' in body
+    assert 'value="Bills" selected' in body
+
+
+def test_summary_requires_login(client):
+    resp = client.get("/profile/summary")
+    assert resp.status_code == 401
+    assert resp.is_json
+
+
+def test_summary_json_shape_and_totals(client):
+    login(client)
+    data = client.get("/profile/summary").get_json()
+    assert data["count"] == 8
+    assert round(data["total"], 2) == 400.24
+    assert data["top_category"] == "Bills"
+    assert sum(c["pct"] for c in data["categories"]) == 100
+    assert "password_hash" not in str(data)
+
+
+def test_summary_honours_filters(client):
+    login(client)
+    data = client.get("/profile/summary?category=Food").get_json()
+    assert data["count"] == 2
+    assert round(data["total"], 2) == 45.25
+    assert [c["category"] for c in data["categories"]] == ["Food"]
+
+
+def test_filters_and_summary_are_isolated_per_user(client):
+    register_and_login(client)
+    data = client.get("/profile/summary?category=Food").get_json()
+    assert data["count"] == 0 and data["total"] == 0
+    assert data["categories"] == []
+    assert "Lunch at cafe" not in client.get("/profile?category=Food").data.decode()

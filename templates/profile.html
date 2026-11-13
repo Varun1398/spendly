@@ -18,6 +18,40 @@
         </div>
     </header>
 
+    <form class="prof-filters" method="get" action="{{ url_for('profile') }}" aria-label="Filter expenses">
+        <label class="prof-field">
+            <span class="prof-label">From</span>
+            <input type="date" name="from" value="{{ filters.date_from or '' }}">
+        </label>
+        <label class="prof-field">
+            <span class="prof-label">To</span>
+            <input type="date" name="to" value="{{ filters.date_to or '' }}">
+        </label>
+        <label class="prof-field">
+            <span class="prof-label">Category</span>
+            <select name="category">
+                <option value="">All categories</option>
+                {% for c in all_categories %}
+                <option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="prof-filter-actions">
+            <button type="submit" class="prof-btn">Apply</button>
+            <a href="{{ url_for('profile') }}" class="prof-clear">Clear</a>
+        </div>
+    </form>
+
+    {% if filtered %}
+    <p class="prof-active-filter">
+        Showing
+        {% if filters.category %}<strong>{{ filters.category }}</strong>{% else %}all categories{% endif %}
+        {% if filters.date_from and filters.date_to %}from <strong>{{ filters.date_from }}</strong> to <strong>{{ filters.date_to }}</strong>
+        {% elif filters.date_from %}from <strong>{{ filters.date_from }}</strong>
+        {% elif filters.date_to %}up to <strong>{{ filters.date_to }}</strong>{% endif %}
+    </p>
+    {% endif %}
+
     <section class="prof-stats" aria-label="Spending summary">
         <div class="prof-stat">
             <span class="prof-label">Total spent</span>
@@ -51,7 +85,7 @@
                 {% endfor %}
             </ul>
             {% else %}
-            <p class="prof-empty">Nothing to break down yet. Add an expense to see where your money goes.</p>
+            <p class="prof-empty">{% if filtered %}No expenses match these filters.{% else %}Nothing to break down yet. Add an expense to see where your money goes.{% endif %}</p>
             {% endif %}
         </section>
 
@@ -80,8 +114,13 @@
             </table>
             {% else %}
             <div class="prof-empty">
+                {% if filtered %}
+                <p>No expenses match these filters.</p>
+                <a href="{{ url_for('profile') }}" class="prof-empty-link">Clear filters</a>
+                {% else %}
                 <p>No expenses yet. Add your first one to see where your money goes.</p>
                 <a href="{{ url_for('add_expense') }}" class="prof-empty-link">Add expense</a>
+                {% endif %}
             </div>
             {% endif %}
         </section>

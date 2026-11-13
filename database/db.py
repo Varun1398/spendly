@@ -68,42 +68,73 @@ def get_user_by_id(user_id):
         conn.close()
 
 
-def get_expense_summary(user_id):
-    """Return {'total': float, 'count': int} for this user's expenses."""
+def _expense_filter(user_id, date_from=None, date_to=None, category=None):
+    """Build a WHERE clause from fixed fragments; values are always bound params."""
+    clauses, params = ["user_id = ?"], [user_id]
+    if date_from:
+        clauses.append("date >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("date <= ?")
+        params.append(date_to)
+    if category:
+        clauses.append("category = ?")
+        params.append(category)
+    return " AND ".join(clauses), params
+
+
+def get_categories(user_id):
+    """Return this user's distinct expense categories, sorted."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT category FROM expenses WHERE user_id = ? ORDER BY category",
+            (user_id,),
+        ).fetchall()
+        return [r["category"] for r in rows]
+    finally:
+        conn.close()
+
+
+def get_expense_summary(user_id, date_from=None, date_to=None, category=None):
+    """Return {'total': float, 'count': int} for this user's (filtered) expenses."""
+    where, params = _expense_filter(user_id, date_from, date_to, category)
     conn = get_db()
     try:
         row = conn.execute(
             "SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count "
-            "FROM expenses WHERE user_id = ?",
-            (user_id,),
+            "FROM expenses WHERE " + where,
+            params,
         ).fetchone()
         return {"total": row["total"], "count": row["count"]}
     finally:
         conn.close()
 
 
-def get_category_totals(user_id):
+def get_category_totals(user_id, date_from=None, date_to=None, category=None):
     """Return [{'category', 'total'}, ...] for this user, highest total first."""
+    where, params = _expense_filter(user_id, date_from, date_to, category)
     conn = get_db()
     try:
         rows = conn.execute(
-            "SELECT category, SUM(amount) AS total FROM expenses "
-            "WHERE user_id = ? GROUP BY category ORDER BY total DESC, category",
-            (user_id,),
+            "SELECT category, SUM(amount) AS total FROM expenses WHERE " + where +
+            " GROUP BY category ORDER BY total DESC, category",
+            params,
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
 
 
-def get_recent_expenses(user_id, limit=10):
-    """Return this user's newest expenses first."""
+def get_recent_expenses(user_id, limit=10, date_from=None, date_to=None, category=None):
+    """Return this user's (filtered) expenses, newest first."""
+    where, params = _expense_filter(user_id, date_from, date_to, category)
     conn = get_db()
     try:
         return conn.execute(
-            "SELECT id, amount, category, date, description FROM expenses "
-            "WHERE user_id = ? ORDER BY date DESC, id DESC LIMIT ?",
-            (user_id, limit),
+            "SELECT id, amount, category, date, description FROM expenses WHERE "
+            + where + " ORDER BY date DESC, id DESC LIMIT ?",
+            params + [limit],
         ).fetchall()
     finally:
         conn.close()
