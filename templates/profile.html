@@ -18,14 +18,20 @@
         </div>
     </header>
 
+    <nav class="prof-presets" aria-label="Date range presets">
+        {% for p in presets %}
+        <a class="prof-preset{% if p.active %} is-active{% endif %}" href="{{ url_for('profile', **p.args) }}"{% if p.active %} aria-current="true"{% endif %}>{{ p.label }}</a>
+        {% endfor %}
+    </nav>
+
     <form class="prof-filters" method="get" action="{{ url_for('profile') }}" aria-label="Filter expenses">
         <label class="prof-field">
             <span class="prof-label">From</span>
-            <input type="date" name="from" value="{{ filters.date_from or '' }}">
+            <input type="date" name="from" value="{{ filters.date_from or '' }}"{% if filters.date_to %} max="{{ filters.date_to }}"{% endif %}>
         </label>
         <label class="prof-field">
             <span class="prof-label">To</span>
-            <input type="date" name="to" value="{{ filters.date_to or '' }}">
+            <input type="date" name="to" value="{{ filters.date_to or '' }}"{% if filters.date_from %} min="{{ filters.date_from }}"{% endif %}>
         </label>
         <label class="prof-field">
             <span class="prof-label">Category</span>
@@ -46,9 +52,9 @@
     <p class="prof-active-filter">
         Showing
         {% if filters.category %}<strong>{{ filters.category }}</strong>{% else %}all categories{% endif %}
-        {% if filters.date_from and filters.date_to %}from <strong>{{ filters.date_from }}</strong> to <strong>{{ filters.date_to }}</strong>
-        {% elif filters.date_from %}from <strong>{{ filters.date_from }}</strong>
-        {% elif filters.date_to %}up to <strong>{{ filters.date_to }}</strong>{% endif %}
+        {% if filters.date_from and filters.date_to %}from <strong>{{ filters.date_from|nicedate }}</strong> – <strong>{{ filters.date_to|nicedate }}</strong>
+        {% elif filters.date_from %}from <strong>{{ filters.date_from|nicedate }}</strong>
+        {% elif filters.date_to %}up to <strong>{{ filters.date_to|nicedate }}</strong>{% endif %}
     </p>
     {% endif %}
 

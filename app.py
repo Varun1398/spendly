@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from flask import (
     Flask,
@@ -45,6 +45,16 @@ def inr(value):
             groups.insert(0, head)
         whole = ",".join(groups) + "," + tail
     return f"₹{whole}.{frac}"
+
+
+@app.template_filter("nicedate")
+def nicedate(value):
+    """Format YYYY-MM-DD as e.g. '1 Nov 2026'; return the input unchanged if invalid."""
+    try:
+        d = datetime.strptime(value, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return value
+    return f"{d.day} {d.strftime('%b %Y')}"
 
 with app.app_context():
     init_db()
@@ -170,10 +180,9 @@ def _member_since(created_at):
 
 
 def _parse_date(value):
-    """Return value if it is a valid YYYY-MM-DD date string, else None."""
+    """Return value as canonical zero-padded YYYY-MM-DD if valid, else None."""
     try:
-        datetime.strptime(value or "", "%Y-%m-%d")
-        return value
+        return datetime.strptime(value or "", "%Y-%m-%d").date().isoformat()
     except ValueError:
         return None
 
@@ -198,6 +207,34 @@ def _parse_filters(args, user_id):
         empty = {"date_from": None, "date_to": None, "category": None}
         return empty, "'From' date must not be after 'To' date. Showing all expenses."
     return filters, None
+
+
+def _date_presets(today, filters):
+    """Return quick date-range presets as [{key, label, args, active}, ...].
+
+    `args` are the query params for url_for('profile', **args); the selected
+    category is carried over, stale from/to are not. `active` is True when the
+    current valid from/to exactly equal the preset's range.
+    """
+    first_this_month = today.replace(day=1)
+    last_prev_month = first_this_month - timedelta(days=1)
+    ranges = [
+        ("this_month", "This month", first_this_month, today),
+        ("last_month", "Last month", last_prev_month.replace(day=1), last_prev_month),
+        ("last_7", "Last 7 days", today - timedelta(days=6), today),
+        ("last_30", "Last 30 days", today - timedelta(days=29), today),
+        ("this_year", "This year", today.replace(month=1, day=1), today),
+        ("all_time", "All time", None, None),
+    ]
+    current = (filters.get("date_from"), filters.get("date_to"))
+    presets = []
+    for key, label, start, end in ranges:
+        dates = (start.isoformat(), end.isoformat()) if start else (None, None)
+        args = {"from": dates[0], "to": dates[1]} if start else {}
+        if filters.get("category"):
+            args["category"] = filters["category"]
+        presets.append({"key": key, "label": label, "args": args, "active": dates == current})
+    return presets
 
 
 # === SECTION 1: TRANSACTION HISTORY (Subagent 1) ===========================
@@ -287,6 +324,7 @@ def profile():
         filters=filters,
         filtered=any(filters.values()),
         all_categories=get_categories(user_id),
+        presets=_date_presets(date.today(), filters),
     )
 
 
