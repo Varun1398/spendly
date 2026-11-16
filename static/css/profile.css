@@ -316,6 +316,12 @@
 
 .prof-btn:hover { background: var(--ink-soft); }
 
+.prof-add {
+    margin-left: auto;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
 .prof-clear {
     color: var(--ink-muted);
     font-size: 0.95rem;

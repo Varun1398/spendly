@@ -7,6 +7,10 @@ from werkzeug.security import generate_password_hash
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(PROJECT_ROOT, "spendly.db")
 
+EXPENSE_CATEGORIES = [
+    "Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other",
+]
+
 
 def get_db():
     """Return a SQLite connection with dict-like rows and foreign keys enforced."""
@@ -150,6 +154,21 @@ def create_user(name, email, password):
         cur = conn.execute(
             "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
             (name, email, generate_password_hash(password)),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def create_expense(user_id, amount, category, date, description):
+    """Insert an expense for this user and return the new id."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, date, description),
         )
         conn.commit()
         return cur.lastrowid

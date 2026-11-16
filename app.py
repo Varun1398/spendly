@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 
 from flask import (
     Flask,
@@ -15,6 +16,8 @@ from flask import (
 from werkzeug.security import check_password_hash
 
 from database.db import (
+    EXPENSE_CATEGORIES,
+    create_expense,
     create_user,
     get_categories,
     get_category_totals,
@@ -29,6 +32,8 @@ from database.db import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
 @app.template_filter("inr")
@@ -237,6 +242,53 @@ def _date_presets(today, filters):
     return presets
 
 
+MAX_AMOUNT = Decimal("10000000")
+MAX_AMOUNT_CHARS = 20
+MAX_DESCRIPTION = 200
+
+
+def _validate_expense(form):
+    """Validate the add-expense form; return (clean, error). Exactly one is None."""
+    raw_amount = form.get("amount", "").strip()
+    if len(raw_amount) > MAX_AMOUNT_CHARS:
+        return None, "Enter a valid amount."
+    try:
+        amount = Decimal(raw_amount)
+    except InvalidOperation:
+        return None, "Enter a valid amount."
+    if not amount.is_finite():
+        return None, "Enter a valid amount."
+    if amount <= 0:
+        return None, "Amount must be greater than zero."
+    # Keep this bound check before quantize(), which can raise on huge values.
+    if amount > MAX_AMOUNT:
+        return None, f"Amount must not exceed {MAX_AMOUNT:,}."
+    if amount != amount.quantize(Decimal("0.01")):
+        return None, "Amount can have at most 2 decimal places."
+
+    category = form.get("category", "").strip()
+    if category not in EXPENSE_CATEGORIES:
+        return None, "Choose a valid category."
+
+    expense_date = _parse_date(form.get("date", "").strip())
+    if expense_date is None:
+        return None, "Enter a valid date."
+    if expense_date > date.today().isoformat():
+        return None, "Date cannot be in the future."
+
+    description = form.get("description", "").strip()
+    if len(description) > MAX_DESCRIPTION:
+        return None, f"Description must be at most {MAX_DESCRIPTION} characters."
+
+    return {
+        # The expenses.amount column is REAL, so a float is what gets stored.
+        "amount": float(amount),
+        "category": category,
+        "date": expense_date,
+        "description": description or None,
+    }, None
+
+
 # === SECTION 1: TRANSACTION HISTORY (Subagent 1) ===========================
 # Owns: _transaction_history
 
@@ -336,9 +388,43 @@ def analytics():
     return render_template("analytics.html")
 
 
-@app.route("/expenses/add")
+def _render_expense_form(values, error=None):
+    return render_template(
+        "add_expense.html",
+        categories=EXPENSE_CATEGORIES,
+        today=date.today().isoformat(),
+        values=values,
+        error=error,
+    )
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please sign in to add an expense.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        return _render_expense_form({"date": date.today().isoformat()})
+
+    clean, error = _validate_expense(request.form)
+    if error:
+        values = {
+            k: request.form.get(k, "")
+            for k in ("amount", "category", "date", "description")
+        }
+        return _render_expense_form(values, error)
+
+    create_expense(
+        user_id,
+        clean["amount"],
+        clean["category"],
+        clean["date"],
+        clean["description"],
+    )
+    flash("Expense added.", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")
