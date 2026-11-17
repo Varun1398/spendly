@@ -176,6 +176,34 @@ def create_expense(user_id, amount, category, date, description):
         conn.close()
 
 
+def get_expense(expense_id, user_id):
+    """Return this user's expense row by id, or None if missing or not theirs."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT id, amount, category, date, description FROM expenses "
+            "WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def update_expense(expense_id, user_id, amount, category, date, description):
+    """Update this user's expense; return True if a row was changed."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? "
+            "WHERE id = ? AND user_id = ?",
+            (amount, category, date, description, expense_id, user_id),
+        )
+        conn.commit()
+        return cur.rowcount == 1
+    finally:
+        conn.close()
+
+
 def seed_db():
     """Insert a demo user and sample expenses once; no-op if users exist."""
     conn = get_db()
