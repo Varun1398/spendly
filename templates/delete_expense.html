@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Delete expense — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_expense.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="exp-page">
+    <div class="exp-header">
+        <h1 class="exp-title">Delete expense?</h1>
+        <p class="exp-subtitle">This will permanently remove the expense below. This can't be undone.</p>
+    </div>
+
+    <div class="exp-card">
+        <dl class="del-details">
+            <div class="del-row"><dt>Date</dt><dd>{{ expense['date']|nicedate }}</dd></div>
+            <div class="del-row"><dt>Description</dt><dd class="del-desc">{{ expense['description'] or '—' }}</dd></div>
+            <div class="del-row"><dt>Category</dt><dd>{{ expense['category'] }}</dd></div>
+            <div class="del-row"><dt>Amount</dt><dd>{{ expense['amount']|inr }}</dd></div>
+        </dl>
+
+        <form method="POST" action="{{ url_for('delete_expense', id=expense['id']) }}">
+            <div class="exp-actions">
+                <button type="submit" class="btn-submit del-confirm">Delete expense</button>
+                <a href="{{ url_for('profile') }}" class="exp-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

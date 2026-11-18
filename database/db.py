@@ -8,7 +8,13 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(PROJECT_ROOT, "spendly.db")
 
 EXPENSE_CATEGORIES = [
-    "Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other",
+    "Food",
+    "Transport",
+    "Bills",
+    "Health",
+    "Entertainment",
+    "Shopping",
+    "Other",
 ]
 
 
@@ -24,8 +30,7 @@ def init_db():
     """Create all tables if they don't exist. Safe to call repeatedly."""
     conn = get_db()
     try:
-        conn.executescript(
-            """
+        conn.executescript("""
             CREATE TABLE IF NOT EXISTS users (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
                 name          TEXT NOT NULL,
@@ -43,8 +48,7 @@ def init_db():
                 description TEXT,
                 created_at  TEXT DEFAULT (datetime('now'))
             );
-            """
-        )
+            """)
         conn.commit()
     finally:
         conn.close()
@@ -54,9 +58,7 @@ def get_user_by_email(email):
     """Return the user row for this email, or None."""
     conn = get_db()
     try:
-        return conn.execute(
-            "SELECT * FROM users WHERE email = ?", (email,)
-        ).fetchone()
+        return conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
     finally:
         conn.close()
 
@@ -121,8 +123,9 @@ def get_category_totals(user_id, date_from=None, date_to=None, category=None):
     conn = get_db()
     try:
         rows = conn.execute(
-            "SELECT category, SUM(amount) AS total FROM expenses WHERE " + where +
-            " GROUP BY category ORDER BY total DESC, category",
+            "SELECT category, SUM(amount) AS total FROM expenses WHERE "
+            + where
+            + " GROUP BY category ORDER BY total DESC, category",
             params,
         ).fetchall()
         return [dict(r) for r in rows]
@@ -137,7 +140,8 @@ def get_recent_expenses(user_id, limit=10, date_from=None, date_to=None, categor
     try:
         return conn.execute(
             "SELECT id, amount, category, date, description FROM expenses WHERE "
-            + where + " ORDER BY date DESC, id DESC LIMIT ?",
+            + where
+            + " ORDER BY date DESC, id DESC LIMIT ?",
             params + [limit],
         ).fetchall()
     finally:
@@ -200,6 +204,20 @@ def update_expense(expense_id, user_id, amount, category, date, description):
         )
         conn.commit()
         return cur.rowcount == 1
+    finally:
+        conn.close()
+
+
+def delete_expense(expense_id, user_id):
+    """Delete this user's expense; return True if a row was removed."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()
 

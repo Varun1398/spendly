@@ -20,6 +20,7 @@ from database.db import (
     EXPENSE_CATEGORIES,
     create_expense,
     create_user,
+    delete_expense as remove_expense,
     get_categories,
     get_category_totals,
     get_db,
@@ -486,9 +487,24 @@ def edit_expense(id):
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["GET", "POST"])
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please sign in to delete an expense.", "error")
+        return redirect(url_for("login"))
+
+    expense = get_expense(id, user_id)
+    if expense is None:
+        abort(404)
+
+    if request.method == "POST":
+        if not remove_expense(id, user_id):
+            abort(404)
+        flash("Expense deleted.", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("delete_expense.html", expense=expense)
 
 
 if __name__ == "__main__":
