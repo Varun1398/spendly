@@ -53,6 +53,34 @@
 
 .exp-cancel:hover { color: var(--accent); text-decoration: underline; }
 
+/* Delete confirmation ------------------------------------------------ */
+
+.del-details { margin-bottom: 1.5rem; }
+
+.del-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.del-row:last-child { border-bottom: none; }
+
+.del-row dt {
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.del-row dd { color: var(--ink); text-align: right; }
+
+.del-desc { overflow-wrap: anywhere; }
+
+.exp-actions .del-confirm { background: var(--danger); }
+.exp-actions .del-confirm:hover { background: var(--danger); filter: brightness(0.9); }
+
 @media (max-width: 480px) {
     .exp-row { grid-template-columns: 1fr; gap: 0; }
     .exp-card { padding: 1.25rem; }
