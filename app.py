@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 
 from flask import (
     Flask,
+    abort,
     flash,
     jsonify,
     redirect,
@@ -22,12 +23,14 @@ from database.db import (
     get_categories,
     get_category_totals,
     get_db,
+    get_expense,
     get_expense_summary,
     get_recent_expenses,
     get_user_by_email,
     get_user_by_id,
     init_db,
     seed_db,
+    update_expense,
 )
 
 app = Flask(__name__)
@@ -388,13 +391,19 @@ def analytics():
     return render_template("analytics.html")
 
 
-def _render_expense_form(values, error=None):
+def _render_expense_form(values, error=None, *, title="Add expense",
+                         subtitle="Record what you spent so your profile stays up to date.",
+                         submit_label="Add expense", action=None):
     return render_template(
         "add_expense.html",
         categories=EXPENSE_CATEGORIES,
         today=date.today().isoformat(),
         values=values,
         error=error,
+        title=title,
+        subtitle=subtitle,
+        submit_label=submit_label,
+        action=action or url_for("add_expense"),
     )
 
 
@@ -427,9 +436,54 @@ def add_expense():
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please sign in to edit an expense.", "error")
+        return redirect(url_for("login"))
+
+    expense = get_expense(id, user_id)
+    if expense is None:
+        abort(404)
+
+    def render(values, error=None):
+        return _render_expense_form(
+            values,
+            error,
+            title="Edit expense",
+            subtitle="Update the details of this expense.",
+            submit_label="Save changes",
+            action=url_for("edit_expense", id=id),
+        )
+
+    if request.method == "GET":
+        return render({
+            "amount": f"{expense['amount']:.2f}",
+            "category": expense["category"],
+            "date": expense["date"],
+            "description": expense["description"] or "",
+        })
+
+    clean, error = _validate_expense(request.form)
+    if error:
+        values = {
+            k: request.form.get(k, "")
+            for k in ("amount", "category", "date", "description")
+        }
+        return render(values, error)
+
+    if not update_expense(
+        id,
+        user_id,
+        clean["amount"],
+        clean["category"],
+        clean["date"],
+        clean["description"],
+    ):
+        abort(404)
+    flash("Expense updated.", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/delete")

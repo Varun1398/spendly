@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Add expense — Spendly{% endblock %}
+{% block title %}{{ title }} — Spendly{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/add_expense.css') }}">
@@ -9,8 +9,8 @@
 {% block content %}
 <section class="exp-page">
     <div class="exp-header">
-        <h1 class="exp-title">Add expense</h1>
-        <p class="exp-subtitle">Record what you spent so your profile stays up to date.</p>
+        <h1 class="exp-title">{{ title }}</h1>
+        <p class="exp-subtitle">{{ subtitle }}</p>
     </div>
 
     <div class="exp-card">
@@ -18,7 +18,7 @@
         <div class="auth-error" role="alert">{{ error }}</div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('add_expense') }}">
+        <form method="POST" action="{{ action }}">
             <div class="exp-row">
                 <div class="form-group">
                     <label for="amount">Amount (₹)</label>
@@ -51,7 +51,7 @@
             </div>
 
             <div class="exp-actions">
-                <button type="submit" class="btn-submit">Add expense</button>
+                <button type="submit" class="btn-submit">{{ submit_label }}</button>
                 <a href="{{ url_for('profile') }}" class="exp-cancel">Cancel</a>
             </div>
         </form>
